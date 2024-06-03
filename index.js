@@ -1,224 +1,113 @@
+const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const fs = require('fs');
+const app = express();
+const cors = require('cors'); 
 
+const port = 6262;
+app.use(cors())
 
-// Read the JSON file
-const jsonData = [];
-const readStream = fs.createReadStream('brandedDownload.json', 'utf8');
-
-readStream.on('data', (chunk) => {
-    jsonData.push(chunk);
+const db = new sqlite3.Database('brandedFoods.db', (err) => {
+    if (err) {
+        console.error(err.message);
+    } else {
+        console.log('Connected to the brandedFoods database.');
+    }
 });
 
-readStream.on('end', () => {
-    const parsedData = JSON.parse(jsonData.join(''));
+// example: http://127.0.0.1:3000/api/search?term=soup&page=1&pageSize=10
+app.get('/api/brand/search', (req, res) => {
+    const searchTerm = req.query.term;
+    const page = req.query.page ? parseInt(req.query.page) : 1;
+    const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
+    const offset = (page - 1) * pageSize;
+    //const sql = `SELECT * FROM BrandedFoods WHERE description LIKE ? ORDER BY id LIMIT ? OFFSET ?`;
+
+    searchBrandedFoods(searchTerm, pageSize, offset)
+        .then(result => {
+            res.json(result);
+        })
+        .catch(error => {
+            res.status(400).json(error);
+        });
+
     
-    // // Execute the script
-    // createTables();
-    // insertData();
-    // db.close();
-
 });
 
-readStream.on('error', (err) => {
-    console.log(err);
+// example: http://127.0.0.1:3000/api/foodNutrients?brandedFoodId=12345
+app.get('/api/brand/foodNutrients', async (req, res) => {
+    const brandedFoodId = req.query.brandedFoodId;
+    try {
+        const result = await getFoodNutrients(brandedFoodId);
+        res.json(result);
+    } catch (error) {
+        res.status(400).json(error);
+    }
 });
 
-// Connect to SQLite database
-const db = new sqlite3.Database('brandedFoods.db');
-
-// Create tables
-const createTables = () => {
-    db.serialize(() => {
-        db.run(`CREATE TABLE IF NOT EXISTS BrandedFoods (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fdcId INTEGER NOT NULL,
-            foodClass TEXT,
-            description TEXT,
-            modifiedDate TEXT,
-            availableDate TEXT,
-            marketCountry TEXT,
-            brandOwner TEXT,
-            gtinUpc TEXT,
-            dataSource TEXT,
-            ingredients TEXT,
-            servingSize REAL,
-            servingSizeUnit TEXT,
-            householdServingFullText TEXT,
-            brandedFoodCategory TEXT,
-            dataType TEXT,
-            publicationDate TEXT
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS Nutrients (
-            id INTEGER PRIMARY KEY,
-            number TEXT,
-            name TEXT,
-            rank INTEGER,
-            unitName TEXT
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS FoodNutrientSources (
-            id INTEGER PRIMARY KEY,
-            code TEXT,
-            description TEXT
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS FoodNutrientDerivations (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            code TEXT,
-            description TEXT,
-            foodNutrientSourceId INTEGER,
-            FOREIGN KEY (foodNutrientSourceId) REFERENCES FoodNutrientSources(id)
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS FoodNutrients (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            brandedFoodId INTEGER,
-            nutrientId INTEGER,
-            foodNutrientDerivationId INTEGER,
-            amount REAL,
-            FOREIGN KEY (brandedFoodId) REFERENCES BrandedFoods(id),
-            FOREIGN KEY (nutrientId) REFERENCES Nutrients(id),
-            FOREIGN KEY (foodNutrientDerivationId) REFERENCES FoodNutrientDerivations(id)
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS FoodAttributeTypes (
-            id INTEGER PRIMARY KEY,
-            name TEXT,
-            description TEXT
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS FoodAttributes (
-            id INTEGER PRIMARY KEY,
-            brandedFoodId INTEGER,
-            name TEXT,
-            value TEXT,
-            foodAttributeTypeId INTEGER,
-            FOREIGN KEY (brandedFoodId) REFERENCES BrandedFoods(id),
-            FOREIGN KEY (foodAttributeTypeId) REFERENCES FoodAttributeTypes(id)
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS LabelNutrients (
-            brandedFoodId INTEGER,
-            nutrientName TEXT,
-            value REAL,
-            PRIMARY KEY (brandedFoodId, nutrientName),
-            FOREIGN KEY (brandedFoodId) REFERENCES BrandedFoods(id)
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS FoodUpdateLogs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            brandedFoodId INTEGER,
-            foodClass TEXT,
-            description TEXT,
-            dataType TEXT,
-            fdcId INTEGER,
-            publicationDate TEXT,
-            FOREIGN KEY (brandedFoodId) REFERENCES BrandedFoods(id)
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS FoodUpdateLogAttributes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            foodUpdateLogId INTEGER,
-            attributeId INTEGER,
-            FOREIGN KEY (foodUpdateLogId) REFERENCES FoodUpdateLogs(id),
-            FOREIGN KEY (attributeId) REFERENCES FoodAttributes(id)
-        )`);
+function searchBrandedFoods(searchTerm, pageSize, offset) {
+    return new Promise((resolve, reject) => {
+        const sql = `WITH FilteredFoods AS (
+            SELECT *
+            FROM BrandedFoods
+            WHERE description LIKE ?
+        ),
+        RankedFoods AS (
+            SELECT *,
+                ROW_NUMBER() OVER (PARTITION BY fdcId ORDER BY id DESC) AS rn
+            FROM FilteredFoods
+        )
+        SELECT *
+        FROM RankedFoods
+        WHERE rn = 1
+        LIMIT ? OFFSET ?
+        `
+        db.all(sql, [`%${searchTerm}%`, pageSize, offset], (err, rows) => {
+            if (err) {
+                reject({"error": err.message});
+            } else {
+                resolve({
+                    "message":"success",
+                    "data":rows
+                });
+            }
+        });
     });
-};
+}
 
-// Insert data into tables
-const insertData = () => {
-    const brandedFoods = jsonData.BrandedFoods;
-
-    brandedFoods.forEach(food => {
-        db.run(`INSERT INTO BrandedFoods (fdcId, foodClass, description, modifiedDate, availableDate, marketCountry, brandOwner, gtinUpc, dataSource, ingredients, servingSize, servingSizeUnit, householdServingFullText, brandedFoodCategory, dataType, publicationDate)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [food.fdcId, food.foodClass, food.description, food.modifiedDate, food.availableDate, food.marketCountry, food.brandOwner, food.gtinUpc, food.dataSource, food.ingredients, food.servingSize, food.servingSizeUnit, food.householdServingFullText, food.brandedFoodCategory, food.dataType, food.publicationDate],
-            function (err) {
-                if (err) {
-                    return console.log(err.message);
-                }
-                const brandedFoodId = this.lastID;
-
-                // Insert food attributes
-                food.foodAttributes.forEach(attr => {
-                    db.run(`INSERT INTO FoodAttributes (brandedFoodId, name, value, foodAttributeTypeId) VALUES (?, ?, ?, ?)`,
-                        [brandedFoodId, attr.name, attr.value, attr.foodAttributeType.id], function (err) {
-                            if (err) {
-                                return console.log(err.message);
-                            }
-                        });
+function getFoodNutrients(brandedFoodId) {
+    return new Promise((resolve, reject) => {
+        const sql = `SELECT * FROM FoodNutrients 
+                     JOIN Nutrients ON FoodNutrients.nutrientId = Nutrients.id 
+                     WHERE FoodNutrients.brandedFoodId = ?`; 
+        db.all(sql, [brandedFoodId], (err, rows) => {
+            if (err) {
+                reject({"error": err.message});
+            } else {
+                resolve({
+                    "message":"success",
+                    "data":rows
                 });
-
-                // Insert label nutrients
-                const labelNutrients = food.labelNutrients;
-                for (const key in labelNutrients) {
-                    if (labelNutrients.hasOwnProperty(key)) {
-                        db.run(`INSERT INTO LabelNutrients (brandedFoodId, nutrientName, value) VALUES (?, ?, ?)`,
-                            [brandedFoodId, key, labelNutrients[key].value], function (err) {
-                                if (err) {
-                                    return console.log(err.message);
-                                }
-                            });
-                    }
-                }
-
-                // Insert food nutrients and related tables
-                food.foodNutrients.forEach(nutrient => {
-                    db.run(`INSERT INTO Nutrients (id, number, name, rank, unitName) VALUES (?, ?, ?, ?, ?)
-                        ON CONFLICT(id) DO NOTHING`,
-                        [nutrient.nutrient.id, nutrient.nutrient.number, nutrient.nutrient.name, nutrient.nutrient.rank, nutrient.nutrient.unitName], function (err) {
-                            if (err) {
-                                return console.log(err.message);
-                            }
-                        });
-
-                    db.run(`INSERT INTO FoodNutrientSources (id, code, description) VALUES (?, ?, ?)
-                        ON CONFLICT(id) DO NOTHING`,
-                        [nutrient.foodNutrientDerivation.foodNutrientSource.id, nutrient.foodNutrientDerivation.foodNutrientSource.code, nutrient.foodNutrientDerivation.foodNutrientSource.description], function (err) {
-                            if (err) {
-                                return console.log(err.message);
-                            }
-                        });
-
-                    db.run(`INSERT INTO FoodNutrientDerivations (code, description, foodNutrientSourceId) VALUES (?, ?, ?)`,
-                        [nutrient.foodNutrientDerivation.code, nutrient.foodNutrientDerivation.description, nutrient.foodNutrientDerivation.foodNutrientSource.id], function (err) {
-                            if (err) {
-                                return console.log(err.message);
-                            }
-                            const derivationId = this.lastID;
-
-                            db.run(`INSERT INTO FoodNutrients (brandedFoodId, nutrientId, foodNutrientDerivationId, amount) VALUES (?, ?, ?, ?)`,
-                                [brandedFoodId, nutrient.nutrient.id, derivationId, nutrient.amount], function (err) {
-                                    if (err) {
-                                        return console.log(err.message);
-                                    }
-                                });
-                        });
-                });
-
-                // Insert food update logs
-                food.foodUpdateLog.forEach(log => {
-                    db.run(`INSERT INTO FoodUpdateLogs (brandedFoodId, foodClass, description, dataType, fdcId, publicationDate) VALUES (?, ?, ?, ?, ?, ?)`,
-                        [brandedFoodId, log.foodClass, log.description, log.dataType, log.fdcId, log.publicationDate], function (err) {
-                            if (err) {
-                                return console.log(err.message);
-                            }
-                            const logId = this.lastID;
-
-                            // Insert food update log attributes
-                            log.foodAttributes.forEach(attr => {
-                                db.run(`INSERT INTO FoodUpdateLogAttributes (foodUpdateLogId, attributeId) VALUES (?, ?)`,
-                                    [logId, attr.id], function (err) {
-                                        if (err) {
-                                            return console.log(err.message);
-                                        }
-                                    });
-                            });
-                        });
-                });
-            });
+            }
+        });
     });
-};
+}
+
+
+app.get('/api/branded/searchAll', (req, res) => {
+    const searchTerm = req.query.term;
+    const sql = `SELECT * FROM BrandedFoods WHERE description LIKE ?`;
+    db.all(sql, [`%${searchTerm}%`], (err, rows) => {
+        if (err) {
+            res.status(400).json({"error": err.message});
+            return;
+        }
+        res.json({
+            "message":"success",
+            "data":rows
+        });
+    });
+});
+
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+});
