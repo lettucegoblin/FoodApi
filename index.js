@@ -52,6 +52,8 @@ app.get('/foodapi/search', (req, res) => {
             "data":rows
         });
     });
+}).get('/', (req, res) => {
+    res.sendFile('food-api-react/build/index.html', {root: __dirname});
 }).use(express.static('food-api-react/build')).listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
