@@ -6,7 +6,6 @@ const cors = require('cors');
 const port = 6262;
 app.use(cors())
 
-app.use(express.static('food-api-react/build'));
 
 const db = new sqlite3.Database('brandedFoods.db', (err) => {
     if (err) {
@@ -45,6 +44,8 @@ app.get('/foodapi/brand/foodNutrients', async (req, res) => {
         res.status(400).json(error);
     }
 });
+
+
 
 function searchBrandedFoods(searchTerm, pageSize, offset) {
     return new Promise((resolve, reject) => {
@@ -109,6 +110,7 @@ app.get('/foodapi/brand/searchAll', (req, res) => {
         });
     });
 });
+app.use(express.static('food-api-react/build'));
 
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
