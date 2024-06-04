@@ -220,7 +220,21 @@ const App: React.FC = () => {
 
   return (
     <Container>
-      <CssBaseline />
+      <Box display="flex" justifyContent="center" mt={2}>
+        <img src="logo512.png" alt="logo" width="100" 
+        className="hover:scale-110 hover:rotate-3 hover:hue-rotate-15 cursor-pointer bounce-once transition-transform duration-600"
+        onClick={(e) => {
+          // re-add bounce-once class to trigger animation
+          if(e.currentTarget.classList.contains('bounce-once')) {
+            e.currentTarget.classList.remove('bounce-once');
+            e.currentTarget.classList.add('spin-once');
+          } else if(e.currentTarget.classList.contains('spin-once')) {
+            e.currentTarget.classList.remove('spin-once');
+            e.currentTarget.classList.add('bounce-once');
+          }
+        }}
+        />
+      </Box>
       <Typography variant="h4" component="h1" gutterBottom>
         Food Search
       </Typography>
@@ -260,7 +274,7 @@ const App: React.FC = () => {
                   <InputLabel htmlFor={`serving-size-${item.id}`}>Serving Size</InputLabel>
                   <IconButton color="warning"
                     onClick={() => handleServingSizeChange(item.id, item.servingSize)}
-                    style={{ position: 'absolute', right: '0', zIndex: 1}}
+                    style={{ position: 'absolute', right: '0', zIndex: 1 }}
                   >
                     Reset
                   </IconButton>
