@@ -3,9 +3,14 @@ import axios from 'axios';
 import './App.css';
 import 'tailwindcss/tailwind.css';
 
-let apiUrl = `http://127.0.0.1:6262/api/brand/search`;
+let apiUrl = `http://127.0.0.1:6262/foodapi/brand/search`;
 if (process.env.NODE_ENV === 'production') {
-  apiUrl = `/api/brand/search`;
+  apiUrl = `/foodapi/brand/search`;
+}
+
+let nutrientApiUrl = `http://127.0.0.1:6262/foodapi/brand/foodNutrients`;
+if (process.env.NODE_ENV === 'production') {
+  nutrientApiUrl = `/foodapi/brand/foodNutrients`;
 }
 
 const PAGE_SIZE = 10; // Number of items to fetch per page
@@ -89,7 +94,7 @@ const App: React.FC = () => {
 
   const fetchNutrients = async (brandedFoodId: number) => {
     try {
-      const response = await axios.get<NutrientApiResponse>(`http://127.0.0.1:6262/api/brand/foodNutrients`, {
+      const response = await axios.get<NutrientApiResponse>(nutrientApiUrl, {
         params: {
           brandedFoodId,
         },

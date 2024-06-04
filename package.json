@@ -7,7 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "build": "cd food-api-react && npm run build"
+    "build": "cd food-api-react && npm run build",
+    "cold-start": "npm i && cd food-api-react && npm i && npm run build && cd .. && npm start"
   },
   "author": "",
   "license": "ISC",
