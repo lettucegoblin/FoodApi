@@ -3,14 +3,14 @@ import axios from 'axios';
 import './App.css';
 import 'tailwindcss/tailwind.css';
 
-let apiUrl = `http://127.0.0.1:6262/foodapi/brand/search`;
+let apiUrl = `http://127.0.0.1:6262/foodapi/search`;
 if (process.env.NODE_ENV === 'production') {
-  apiUrl = `/foodapi/brand/search`;
+  apiUrl = `/foodapi/search`;
 }
 
-let nutrientApiUrl = `http://127.0.0.1:6262/foodapi/brand/foodNutrients`;
+let nutrientApiUrl = `http://127.0.0.1:6262/foodapi/foodNutrients`;
 if (process.env.NODE_ENV === 'production') {
-  nutrientApiUrl = `/foodapi/brand/foodNutrients`;
+  nutrientApiUrl = `/foodapi/foodNutrients`;
 }
 
 const PAGE_SIZE = 10; // Number of items to fetch per page
