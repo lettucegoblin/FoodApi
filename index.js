@@ -16,8 +16,8 @@ const db = new sqlite3.Database('brandedFoods.db', (err) => {
     }
 });
 
-// example: http://127.0.0.1:3000/api/search?term=soup&page=1&pageSize=10
-app.get('/api/brand/search', (req, res) => {
+// example: http://127.0.0.1:3000/foodapi/search?term=soup&page=1&pageSize=10
+app.get('/foodapi/brand/search', (req, res) => {
     const searchTerm = req.query.term;
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
@@ -36,7 +36,7 @@ app.get('/api/brand/search', (req, res) => {
 });
 
 // example: http://127.0.0.1:3000/api/foodNutrients?brandedFoodId=12345
-app.get('/api/brand/foodNutrients', async (req, res) => {
+app.get('/foodapi/brand/foodNutrients', async (req, res) => {
     const brandedFoodId = req.query.brandedFoodId;
     try {
         const result = await getFoodNutrients(brandedFoodId);
@@ -95,7 +95,7 @@ function getFoodNutrients(brandedFoodId) {
 }
 
 
-app.get('/api/branded/searchAll', (req, res) => {
+app.get('/foodapi/brand/searchAll', (req, res) => {
     const searchTerm = req.query.term;
     const sql = `SELECT * FROM BrandedFoods WHERE description LIKE ?`;
     db.all(sql, [`%${searchTerm}%`], (err, rows) => {
