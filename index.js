@@ -52,8 +52,9 @@ app.get('/foodapi/search', (req, res) => {
             "data":rows
         });
     });
+}).use(express.static('food-api-react/build')).listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });
-app.use(express.static('food-api-react/build'));
 
 
 function searchBrandedFoods(searchTerm, pageSize, offset) {
@@ -103,10 +104,3 @@ function getFoodNutrients(brandedFoodId) {
         });
     });
 }
-
-
-
-
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-});
