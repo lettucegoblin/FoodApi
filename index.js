@@ -54,7 +54,7 @@ app.get('/foodapi/search', (req, res) => {
     });
 }).get('/foodapi/', (req, res) => {
     res.sendFile('food-api-react/build/index.html', {root: __dirname});
-}).use(express.static('food-api-react/build')).listen(port, () => {
+}).use('/foodapi', express.static('food-api-react/build')).listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
 
