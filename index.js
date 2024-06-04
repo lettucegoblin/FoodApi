@@ -6,6 +6,8 @@ const cors = require('cors');
 const port = 6262;
 app.use(cors())
 
+app.use(express.static('food-api-react/build'));
+
 const db = new sqlite3.Database('brandedFoods.db', (err) => {
     if (err) {
         console.error(err.message);
