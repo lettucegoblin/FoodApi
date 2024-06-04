@@ -1,6 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import './App.css';
+import {
+  Box,
+  Button,
+  Container,
+  CssBaseline,
+  InputAdornment,
+  TextField,
+  Typography,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  FormControl,
+  InputLabel,
+  Input,
+  IconButton,
+  Divider,
+  CircularProgress,
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import 'tailwindcss/tailwind.css';
 
 let apiUrl = `http://127.0.0.1:6262/foodapi/search`;
@@ -65,7 +84,7 @@ const App: React.FC = () => {
   const [nutrients, setNutrients] = useState<{ [key: number]: Nutrient[] }>({});
   const [servingSizes, setServingSizes] = useState<{ [key: number]: number }>({});
   const [allExpanded, setAllExpanded] = useState(false);
-  const loader = useRef(null);
+  const loader = useRef<HTMLDivElement | null>(null);
 
   const handleSearch = async () => {
     try {
@@ -171,6 +190,22 @@ const App: React.FC = () => {
     }));
   };
 
+  // decrease by one
+  const decreaseServingSize = (id: number) => {
+    setServingSizes((prevSizes) => ({
+      ...prevSizes,
+      [id]: prevSizes[id] - 1,
+    }));
+  };
+
+  // increase by one
+  const increaseServingSize = (id: number) => {
+    setServingSizes((prevSizes) => ({
+      ...prevSizes,
+      [id]: prevSizes[id] + 1,
+    }));
+  };
+
   const getNutrientAmount = (brandedFoodId: number, nutrientName: string) => {
     const nutrient = nutrients[brandedFoodId]?.find((n) => n.name === nutrientName);
     if (nutrient) {
@@ -184,59 +219,86 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="App p-4">
-      <h1 className="text-2xl font-bold mb-4">Food Search</h1>
-      <input
-        type="text"
+    <Container>
+      <CssBaseline />
+      <Typography variant="h4" component="h1" gutterBottom>
+        Food Search
+      </Typography>
+      <TextField
+        label="Search for food..."
         value={term}
         onChange={(e) => {
           setTerm(e.target.value);
           setPage(1);
           setResults([]);
         }}
-        placeholder="Search for food..."
-        className="border p-2 mb-4 w-full"
+        fullWidth
+        margin="normal"
+        variant="outlined"
       />
-      <button onClick={toggleExpandAll} className="bg-blue-500 text-white p-2 mb-4">
+      <Button
+        variant="contained"
+        color="primary"
+        onClick={toggleExpandAll}
+        style={{ marginBottom: '20px' }}
+      >
         {allExpanded ? 'Collapse All' : 'Expand All'}
-      </button>
+      </Button>
       <div>
         {results.map((item) => (
-          <div key={item.id} className="mb-4 p-4 border rounded shadow-sm">
-            <div
-              className="cursor-pointer"
-              onClick={() => toggleExpand(item.id, item.id)}
-            >
-              <h2 className="text-lg font-bold">{item.description}</h2>
-            </div>
-            {expanded[item.id] && (
-              <div className="mt-2">
-                <label className="block mb-2">
-                  Serving Size:
-                  <div>
-                  <input
+          <Accordion
+            key={item.id}
+            expanded={expanded[item.id]}
+            onChange={() => toggleExpand(item.id, item.id)}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Typography variant="h6">{item.description}</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Box mb={2}>
+                <FormControl variant="outlined" fullWidth>
+                  <InputLabel htmlFor={`serving-size-${item.id}`}>Serving Size</InputLabel>
+                  <IconButton color="warning"
+                    onClick={() => handleServingSizeChange(item.id, item.servingSize)}
+                    style={{ position: 'absolute', right: '0', zIndex: 1}}
+                  >
+                    Reset
+                  </IconButton>
+                  <IconButton color="secondary" onClick={() => decreaseServingSize(item.id)}>
+                    -
+                  </IconButton>
+                  <Input
+                    id={`serving-size-${item.id}`}
                     type="number"
                     value={servingSizes[item.id] || item.servingSize}
                     onChange={(e) => handleServingSizeChange(item.id, parseFloat(e.target.value))}
-                    className="border p-2 ml-2 pr-5 text-right w-16"
+                    endAdornment={<InputAdornment position="end">{item.servingSizeUnit}</InputAdornment>}
                   />
-                  <span className="-ml-4 pointer-events-none">
-                    {item.servingSizeUnit}
-                  </span>
-                  </div>
-                </label>
-                <p><strong>Calories:</strong> {getNutrientAmount(item.id, "Energy")} kcal</p>
-                <p><strong>Protein:</strong> {getNutrientAmount(item.id, "Protein")} g</p>
-                <p><strong>Carbs:</strong> {getNutrientAmount(item.id, "Carbohydrate, by difference")} g</p>
-                <p><strong>Total Fiber:</strong> {getNutrientAmount(item.id, "Fiber, total dietary")} g</p>
-                <p><strong>Fat:</strong> {getNutrientAmount(item.id, "Total lipid (fat)")} g</p>
-                <p><strong>Sugar:</strong> {getNutrientAmount(item.id, "Total Sugars")} g</p>
-                <details className="mt-2">
-                  <summary className="cursor-pointer">Ingredients</summary>
-                  <p>{item.ingredients}</p>
-                </details>
-                <details className="mt-2">
-                  <summary className="cursor-pointer">All Nutrients</summary>
+                  <IconButton color="primary" onClick={() => increaseServingSize(item.id)}>
+                    +
+                  </IconButton>
+                </FormControl>
+              </Box>
+              <Typography variant="body1"><strong>Calories:</strong> {getNutrientAmount(item.id, "Energy")} kcal</Typography>
+              <Typography variant="body1"><strong>Protein:</strong> {getNutrientAmount(item.id, "Protein")} g</Typography>
+              <Typography variant="body1"><strong>Carbs:</strong> {getNutrientAmount(item.id, "Carbohydrate, by difference")} g</Typography>
+              <Typography variant="body1"><strong>Total Fiber:</strong> {getNutrientAmount(item.id, "Fiber, total dietary")} g</Typography>
+              <Typography variant="body1"><strong>Fat:</strong> {getNutrientAmount(item.id, "Total lipid (fat)")} g</Typography>
+              <Typography variant="body1"><strong>Sugar:</strong> {getNutrientAmount(item.id, "Total Sugars")} g</Typography>
+              <Divider style={{ margin: '20px 0' }} />
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography>Ingredients</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Typography>{item.ingredients}</Typography>
+                </AccordionDetails>
+              </Accordion>
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography>All Nutrients</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
                   <ul>
                     {nutrients[item.id]?.map((nutrient) => (
                       <li key={nutrient.id}>
@@ -244,14 +306,20 @@ const App: React.FC = () => {
                       </li>
                     ))}
                   </ul>
-                </details>
-              </div>
-            )}
-          </div>
+                </AccordionDetails>
+              </Accordion>
+            </AccordionDetails>
+          </Accordion>
         ))}
       </div>
-      <div ref={loader} />
-    </div>
+      <div ref={loader}>
+        {results.length > 0 && (
+          <Box display="flex" justifyContent="center" mt={2}>
+            <CircularProgress />
+          </Box>
+        )}
+      </div>
+    </Container>
   );
 };
 
