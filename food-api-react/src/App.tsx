@@ -328,7 +328,7 @@ const App: React.FC = () => {
       </div>
       <div ref={loader}>
         {results.length > 0 && (
-          <Box display="flex" justifyContent="center" mt={2}>
+          <Box display="flex" justifyContent="center" mt={2} className="min-h-16">
             <CircularProgress />
           </Box>
         )}
