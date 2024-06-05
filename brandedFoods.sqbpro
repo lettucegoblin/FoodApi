@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="D:/projects/FoodApi/brandedFoods.db" readonly="0" foreign_keys="" case_sensitive_like="" temp_store="" wal_autocheckpoint="" synchronous=""/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="2400"/><column_width id="4" width="0"/></tab_structure><tab_browse><current_table name="0,0:"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 4">select * from BrandedFoods where BrandedFoods.description like '%CLASSIC LENTIL SOUP%' limit 10;</sql><sql name="SQL 1">select * from BrandedFoods where BrandedFoods.id = 388510;</sql><sql name="SQL 2">select * from FoodNutrients where brandedFoodId = 388510;</sql><sql name="SQL 3">SELECT * FROM FoodNutrients 
+	JOIN Nutrients ON FoodNutrients.nutrientId = Nutrients.id 
+	WHERE FoodNutrients.brandedFoodId = 388510;</sql><sql name="SQL 5">CREATE INDEX idx_description ON BrandedFoods (description);
+CREATE INDEX idx_fdcId_id ON BrandedFoods (fdcId, id);
+</sql><sql name="SQL 6">SELECT * 
+FROM BrandedFoods
+WHERE fdcId IN (
+    SELECT fdcId
+    FROM BrandedFoods
+    GROUP BY fdcId
+    HAVING COUNT(fdcId) &gt; 1
+);
+</sql><sql name="SQL 7">SELECT * 
+FROM BrandedFoods bf
+WHERE (fdcId, foodClass, description, modifiedDate, availableDate, marketCountry, brandOwner, gtinUpc, dataSource, ingredients, servingSize, servingSizeUnit, householdServingFullText, brandedFoodCategory, dataType, publicationDate) IN (
+    SELECT fdcId, foodClass, description, modifiedDate, availableDate, marketCountry, brandOwner, gtinUpc, dataSource, ingredients, servingSize, servingSizeUnit, householdServingFullText, brandedFoodCategory, dataType, publicationDate
+    FROM BrandedFoods
+    GROUP BY fdcId, foodClass, description, modifiedDate, availableDate, marketCountry, brandOwner, gtinUpc, dataSource, ingredients, servingSize, servingSizeUnit, householdServingFullText, brandedFoodCategory, dataType, publicationDate
+    HAVING COUNT(*) &gt; 1
+);
+</sql><sql name="SQL 8">SELECT bf.*, counts.duplicate_count
+FROM BrandedFoods bf
+JOIN (
+    SELECT fdcId, foodClass, description, modifiedDate, availableDate, marketCountry, brandOwner, gtinUpc, dataSource, ingredients, servingSize, servingSizeUnit, householdServingFullText, brandedFoodCategory, dataType, publicationDate, COUNT(*) AS duplicate_count
+    FROM BrandedFoods
+    GROUP BY fdcId, foodClass, description, modifiedDate, availableDate, marketCountry, brandOwner, gtinUpc, dataSource, ingredients, servingSize, servingSizeUnit, householdServingFullText, brandedFoodCategory, dataType, publicationDate
+    HAVING COUNT(*) &gt; 1
+) counts
+ON bf.fdcId = counts.fdcId
+AND bf.foodClass = counts.foodClass
+AND bf.description = counts.description
+AND bf.modifiedDate = counts.modifiedDate
+AND bf.availableDate = counts.availableDate
+AND bf.marketCountry = counts.marketCountry
+AND bf.brandOwner = counts.brandOwner
+AND bf.gtinUpc = counts.gtinUpc
+AND bf.dataSource = counts.dataSource
+AND bf.ingredients = counts.ingredients
+AND bf.servingSize = counts.servingSize
+AND bf.servingSizeUnit = counts.servingSizeUnit
+AND bf.householdServingFullText = counts.householdServingFullText
+AND bf.brandedFoodCategory = counts.brandedFoodCategory
+AND bf.dataType = counts.dataType
+AND bf.publicationDate = counts.publicationDate
+ORDER BY counts.duplicate_count DESC;
+</sql><sql name="SQL 9">WITH FilteredFoods AS (
+    SELECT *
+    FROM BrandedFoods
+    WHERE description LIKE '%CLASSIC LENTIL SOUP%'
+),
+RankedFoods AS (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY fdcId ORDER BY id DESC) AS rn
+    FROM FilteredFoods
+)
+SELECT *
+FROM RankedFoods
+WHERE rn = 1
+LIMIT 10;
+</sql><current_tab id="3"/></tab_sql></sqlb_project>
