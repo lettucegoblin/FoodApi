@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import "./App.css";
+import FoodLogo from "./logo512.png";
+
 import {
   Box,
   Button,
   Container,
   CssBaseline,
-  InputAdornment,
   TextField,
   Typography,
   Accordion,
@@ -20,8 +21,13 @@ import {
   CircularProgress,
   FormControlLabel,
   Divider,
+  createTheme,
+  ThemeProvider,
+  useMediaQuery,
+  InputAdornment,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import ThemeToggle from "./ThemeToggle";
 import "tailwindcss/tailwind.css";
 
 let apiUrlBase = `http://127.0.0.1:6262/foodapi`;
@@ -267,217 +273,241 @@ const App: React.FC = () => {
     setNutrients({});
   };
 
+  // Define state for theme and function to toggle it
+  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
+  const [darkMode, setDarkMode] = useState(prefersDarkMode);
+
+  const toggleTheme = () => {
+    setDarkMode(!darkMode);
+  };
+
+  useEffect(() => {
+    setDarkMode(prefersDarkMode);
+  }, [prefersDarkMode]);
+
+  const theme = createTheme({
+    palette: {
+      mode: darkMode ? "dark" : "light",
+    },
+  });
+
   return (
-    <Container>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box display="flex" justifyContent="center" mt={2}>
-        <img
-          src="logo512.png"
-          alt="logo"
-          width="100"
-          className="hover:scale-110 hover:rotate-3 hover:hue-rotate-15 cursor-pointer bounce-once transition-transform duration-600"
-          onClick={(e) => {
-            // re-add bounce-once class to trigger animation
-            if (e.currentTarget.classList.contains("bounce-once")) {
-              e.currentTarget.classList.remove("bounce-once");
-              e.currentTarget.classList.add("spin-once");
-            } else if (e.currentTarget.classList.contains("spin-once")) {
-              e.currentTarget.classList.remove("spin-once");
-              e.currentTarget.classList.add("bounce-once");
-            }
+      <Box display="flex" justifyContent="space-between" alignItems="center" >
+        <Typography variant="h4" component="h1" gutterBottom>
+          Food Search
+        </Typography>
+        <Box className="logo" display="flex" justifyContent="center" mt={2}>
+          <img
+            src={FoodLogo}
+            alt="logo"
+            width="100"
+            className="hover:scale-110 hover:rotate-3 hover:hue-rotate-15 cursor-pointer bounce-once transition-transform duration-600"
+            onClick={(e) => {
+              // re-add bounce-once class to trigger animation
+              if (e.currentTarget.classList.contains("bounce-once")) {
+                e.currentTarget.classList.remove("bounce-once");
+                e.currentTarget.classList.add("spin-once");
+              } else if (e.currentTarget.classList.contains("spin-once")) {
+                e.currentTarget.classList.remove("spin-once");
+                e.currentTarget.classList.add("bounce-once");
+              }
+            }}
+          />
+        </Box>
+        <ThemeToggle toggleTheme={toggleTheme} />
+      </Box>
+
+      <Container>
+        <TextField
+          label="Search for food..."
+          value={term}
+          onChange={(e) => {
+            setTerm(e.target.value);
+            setPage(1);
+            setResults([]);
           }}
+          fullWidth
+          margin="normal"
+          variant="outlined"
         />
-      </Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Food Search
-      </Typography>
-      <TextField
-        label="Search for food..."
-        value={term}
-        onChange={(e) => {
-          setTerm(e.target.value);
-          setPage(1);
-          setResults([]);
-        }}
-        fullWidth
-        margin="normal"
-        variant="outlined"
-      />
-      <Box display="flex" justifyContent="center" mb={2}>
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={searchType === "all"}
-              onChange={() => handleFilterChange("all")}
-              name="all"
-              color="primary"
-            />
-          }
-          label="All"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={searchType === "branded"}
-              onChange={() => handleFilterChange("branded")}
-              name="branded"
-              color="primary"
-            />
-          }
-          label="Branded"
-        />
-        <FormControlLabel
-          control={
-            <Checkbox
-              checked={searchType === "foundation"}
-              onChange={() => handleFilterChange("foundation")}
-              name="foundation"
-              color="primary"
-            />
-          }
-          label="Foundation"
-        />
-      </Box>
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={toggleExpandAll}
-        style={{ marginBottom: "20px" }}
-      >
-        {allExpanded ? "Collapse All" : "Expand All"}
-      </Button>
-      <div>
-        {results.map((item) => (
-          <Accordion
-            key={item.id}
-            expanded={!!expanded[item.id]} // Ensure it's always a boolean
-            onChange={() =>
-              toggleExpand(
-                item.id,
-                item.foodClass === "Branded" ? "branded" : "foundation"
-              )
+        <Box display="flex" justifyContent="center" mb={2}>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={searchType === "all"}
+                onChange={() => handleFilterChange("all")}
+                name="all"
+                color="primary"
+              />
             }
-          >
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography variant="h6">{item.description}</Typography>
-            </AccordionSummary>
-            <AccordionDetails>
-              <Box mb={2}>
-                <FormControl variant="outlined" fullWidth>
-                  <InputLabel htmlFor={`serving-size-${item.id}`}>
-                    Serving Size
-                  </InputLabel>
-                  <IconButton
-                    color="warning"
-                    onClick={() =>
-                      handleServingSizeChange(item.id, item.servingSize)
-                    }
-                    style={{ position: "absolute", right: "0", zIndex: 1 }}
-                  >
-                    Reset
-                  </IconButton>
-                  <IconButton
-                    color="secondary"
-                    onClick={() => decreaseServingSize(item.id)}
-                  >
-                    -
-                  </IconButton>
-                  <Input
-                    id={`serving-size-${item.id}`}
-                    type="number"
-                    value={servingSizes[item.id] || item.servingSize}
-                    onChange={(e) =>
-                      handleServingSizeChange(
-                        item.id,
-                        parseFloat(e.target.value)
-                      )
-                    }
-                    endAdornment={
-                      <InputAdornment position="end">
-                        {item.servingSizeUnit}
-                      </InputAdornment>
-                    }
-                  />
-                  <IconButton
-                    color="primary"
-                    onClick={() => increaseServingSize(item.id)}
-                  >
-                    +
-                  </IconButton>
-                </FormControl>
-              </Box>
-              <Typography variant="body1">
-                <strong>Calories:</strong>{" "}
-                {getNutrientAmount(item.id, "Energy")} kcal
-              </Typography>
-              <Typography variant="body1">
-                <strong>Protein:</strong>{" "}
-                {getNutrientAmount(item.id, "Protein")} g
-              </Typography>
-              <Typography variant="body1">
-                <strong>Carbs:</strong>{" "}
-                {getNutrientAmount(item.id, "Carbohydrate, by difference")} g
-              </Typography>
-              <Typography variant="body1">
-                <strong>Total Fiber:</strong>{" "}
-                {getNutrientAmount(item.id, "Fiber, total dietary")} g
-              </Typography>
-              <Typography variant="body1">
-                <strong>Fat:</strong>{" "}
-                {getNutrientAmount(item.id, "Total lipid (fat)")} g
-              </Typography>
-              <Typography variant="body1">
-                <strong>Sugar:</strong>{" "}
-                {getNutrientAmount(item.id, "Total Sugars")} g
-              </Typography>
-              <Divider style={{ margin: "20px 0" }} />
-              {item.foodClass === "Branded" && (
+            label="All"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={searchType === "branded"}
+                onChange={() => handleFilterChange("branded")}
+                name="branded"
+                color="primary"
+              />
+            }
+            label="Branded"
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={searchType === "foundation"}
+                onChange={() => handleFilterChange("foundation")}
+                name="foundation"
+                color="primary"
+              />
+            }
+            label="Foundation"
+          />
+        </Box>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={toggleExpandAll}
+          style={{ marginBottom: "20px" }}
+        >
+          {allExpanded ? "Collapse All" : "Expand All"}
+        </Button>
+        <div>
+          {results.map((item) => (
+            <Accordion
+              key={item.id}
+              expanded={!!expanded[item.id]} // Ensure it's always a boolean
+              onChange={() =>
+                toggleExpand(
+                  item.id,
+                  item.foodClass === "Branded" ? "branded" : "foundation"
+                )
+              }
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">{item.description}</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <Box mb={2}>
+                  <FormControl variant="outlined" fullWidth>
+                    <InputLabel htmlFor={`serving-size-${item.id}`}>
+                      Serving Size
+                    </InputLabel>
+                    <IconButton
+                      color="warning"
+                      onClick={() =>
+                        handleServingSizeChange(item.id, item.servingSize)
+                      }
+                      style={{ position: "absolute", right: "0", zIndex: 1 }}
+                    >
+                      Reset
+                    </IconButton>
+                    <IconButton
+                      color="secondary"
+                      onClick={() => decreaseServingSize(item.id)}
+                    >
+                      -
+                    </IconButton>
+                    <Input
+                      id={`serving-size-${item.id}`}
+                      type="number"
+                      value={servingSizes[item.id] || item.servingSize}
+                      onChange={(e) =>
+                        handleServingSizeChange(
+                          item.id,
+                          parseFloat(e.target.value)
+                        )
+                      }
+                      endAdornment={
+                        <InputAdornment position="end">
+                          {item.servingSizeUnit}
+                        </InputAdornment>
+                      }
+                    />
+                    <IconButton
+                      color="primary"
+                      onClick={() => increaseServingSize(item.id)}
+                    >
+                      +
+                    </IconButton>
+                  </FormControl>
+                </Box>
+                <Typography variant="body1">
+                  <strong>Calories:</strong>{" "}
+                  {getNutrientAmount(item.id, "Energy")} kcal
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Protein:</strong>{" "}
+                  {getNutrientAmount(item.id, "Protein")} g
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Carbs:</strong>{" "}
+                  {getNutrientAmount(item.id, "Carbohydrate, by difference")} g
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Total Fiber:</strong>{" "}
+                  {getNutrientAmount(item.id, "Fiber, total dietary")} g
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Fat:</strong>{" "}
+                  {getNutrientAmount(item.id, "Total lipid (fat)")} g
+                </Typography>
+                <Typography variant="body1">
+                  <strong>Sugar:</strong>{" "}
+                  {getNutrientAmount(item.id, "Total Sugars")} g
+                </Typography>
+                <Divider style={{ margin: "20px 0" }} />
+                {item.foodClass === "Branded" && (
+                  <Accordion>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Typography>Ingredients</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <Typography>{item.ingredients}</Typography>
+                    </AccordionDetails>
+                  </Accordion>
+                )}
                 <Accordion>
                   <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography>Ingredients</Typography>
+                    <Typography>All Nutrients</Typography>
                   </AccordionSummary>
                   <AccordionDetails>
-                    <Typography>{item.ingredients}</Typography>
+                    <ul>
+                      {nutrients[item.id]?.map((nutrient) => (
+                        <li key={nutrient.id}>
+                          <strong>{nutrient.name}:</strong>{" "}
+                          {(
+                            (nutrient.amount *
+                              (servingSizes[item.id] || item.servingSize)) /
+                            item.servingSize
+                          ).toFixed(2)}{" "}
+                          {nutrient.unitName}
+                        </li>
+                      ))}
+                    </ul>
                   </AccordionDetails>
                 </Accordion>
-              )}
-              <Accordion>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography>All Nutrients</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <ul>
-                    {nutrients[item.id]?.map((nutrient) => (
-                      <li key={nutrient.id}>
-                        <strong>{nutrient.name}:</strong>{" "}
-                        {(
-                          (nutrient.amount *
-                            (servingSizes[item.id] || item.servingSize)) /
-                          item.servingSize
-                        ).toFixed(2)}{" "}
-                        {nutrient.unitName}
-                      </li>
-                    ))}
-                  </ul>
-                </AccordionDetails>
-              </Accordion>
-            </AccordionDetails>
-          </Accordion>
-        ))}
-      </div>
-      <div ref={loader}>
-        {isLoading && (
-          <Box
-            display="flex"
-            justifyContent="center"
-            mt={2}
-            className="min-h-16"
-          >
-            <CircularProgress />
-          </Box>
-        )}
-      </div>
-    </Container>
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </div>
+        <div ref={loader}>
+          {isLoading && (
+            <Box
+              display="flex"
+              justifyContent="center"
+              mt={2}
+              className="min-h-16"
+            >
+              <CircularProgress />
+            </Box>
+          )}
+        </div>
+      </Container>
+    </ThemeProvider>
   );
 };
 
