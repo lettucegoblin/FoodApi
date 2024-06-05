@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import './App.css';
+import React, { useState, useEffect, useRef } from "react";
+import axios from "axios";
+import "./App.css";
 import {
   Box,
   Button,
@@ -13,18 +13,19 @@ import {
   AccordionSummary,
   AccordionDetails,
   FormControl,
+  IconButton,
   InputLabel,
   Input,
   Checkbox,
   CircularProgress,
   FormControlLabel,
   Divider,
-} from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import 'tailwindcss/tailwind.css';
+} from "@mui/material";
+import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import "tailwindcss/tailwind.css";
 
 let apiUrlBase = `http://127.0.0.1:6262/foodapi`;
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   apiUrlBase = `/foodapi`;
 }
 
@@ -76,21 +77,25 @@ interface NutrientApiResponse {
 }
 
 const App: React.FC = () => {
-  const [term, setTerm] = useState('');
+  const [term, setTerm] = useState("");
   const [results, setResults] = useState<FoodItem[]>([]);
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<{ [key: number]: boolean }>({});
   const [nutrients, setNutrients] = useState<{ [key: number]: Nutrient[] }>({});
-  const [servingSizes, setServingSizes] = useState<{ [key: number]: number }>({});
+  const [servingSizes, setServingSizes] = useState<{ [key: number]: number }>(
+    {}
+  );
   const [allExpanded, setAllExpanded] = useState(false);
-  const [searchType, setSearchType] = useState<'all' | 'branded' | 'foundation'>('all');
+  const [searchType, setSearchType] = useState<
+    "all" | "branded" | "foundation"
+  >("all");
   const loader = useRef<HTMLDivElement | null>(null);
 
   const handleSearch = async () => {
     let apiUrl = `${apiUrlBase}/searchAll`;
-    if (searchType === 'branded') {
+    if (searchType === "branded") {
       apiUrl = `${apiUrlBase}/brandSearch`;
-    } else if (searchType === 'foundation') {
+    } else if (searchType === "foundation") {
       apiUrl = `${apiUrlBase}/foundationSearch`;
     }
 
@@ -110,7 +115,7 @@ const App: React.FC = () => {
       setResults((prevResults) => [...prevResults, ...newResults]);
       setServingSizes((prevSizes) => ({ ...prevSizes, ...newServingSizes }));
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     }
   };
 
@@ -118,20 +123,24 @@ const App: React.FC = () => {
     setPage((prevPage) => prevPage + 1); // Increase page number
   };
 
-  const fetchNutrients = async (foodId: number, foodType: 'branded' | 'foundation') => {
+  const fetchNutrients = async (
+    foodId: number,
+    foodType: "branded" | "foundation"
+  ) => {
     try {
       const response = await axios.get<NutrientApiResponse>(nutrientApiUrl, {
         params: {
-          brandedFoodId: foodType === 'branded' ? foodId : undefined,
-          foundationalFoodId: foodType === 'foundation' ? foodId : undefined,
+          brandedFoodId: foodType === "branded" ? foodId : undefined,
+          foundationalFoodId: foodType === "foundation" ? foodId : undefined,
         },
       });
+      console.log("Nutrient data:", response.data.data);
       setNutrients((prevNutrients) => ({
         ...prevNutrients,
         [foodId]: response.data.data,
       }));
     } catch (error) {
-      console.error('Error fetching nutrient data:', error);
+      console.error("Error fetching nutrient data:", error);
     }
   };
 
@@ -142,6 +151,11 @@ const App: React.FC = () => {
   }, [term, page, searchType]); // Run effect when term, page, or searchType changes
 
   useEffect(() => {
+    setTimeout(() => {
+      console.log("Loading more data...");
+      loadMore();
+    }, 5000);
+    
     const handleObserver = (entities: IntersectionObserverEntry[]) => {
       const target = entities[0];
       if (target.isIntersecting) {
@@ -151,8 +165,8 @@ const App: React.FC = () => {
 
     const options = {
       root: null,
-      rootMargin: '20px',
-      threshold: 1.0,
+      rootMargin: "20px",
+      threshold: 0.2,
     };
 
     const observer = new IntersectionObserver(handleObserver, options);
@@ -168,7 +182,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const toggleExpand = (id: number, foodType: 'branded' | 'foundation') => {
+  const toggleExpand = (id: number, foodType: "branded" | "foundation") => {
     if (!expanded[id]) {
       fetchNutrients(id, foodType);
     }
@@ -184,7 +198,10 @@ const App: React.FC = () => {
     results.forEach((item) => {
       newExpanded[item.id] = newExpandedState;
       if (!nutrients[item.id] && newExpandedState) {
-        fetchNutrients(item.id, item.foodClass === 'Branded' ? 'branded' : 'foundation');
+        fetchNutrients(
+          item.id,
+          item.foodClass === "Branded" ? "branded" : "foundation"
+        );
       }
     });
     setExpanded(newExpanded);
@@ -198,21 +215,64 @@ const App: React.FC = () => {
     }));
   };
 
+  // decrease by one
+  const decreaseServingSize = (id: number) => {
+    setServingSizes((prevSizes) => ({
+      ...prevSizes,
+      [id]: prevSizes[id] - 1,
+    }));
+  };
+
+  // increase by one
+  const increaseServingSize = (id: number) => {
+    setServingSizes((prevSizes) => ({
+      ...prevSizes,
+      [id]: prevSizes[id] + 1,
+    }));
+  };
+
   const getNutrientAmount = (foodId: number, nutrientName: string) => {
-    const nutrient = nutrients[foodId]?.find((n) => n.name === nutrientName);
+    const nutrient = nutrients[foodId]?.find((n) => {
+      if (n.name === "Energy") {
+        return n.name === nutrientName && n.unitName === "kcal";
+      }
+      return n.name === nutrientName;
+    });
     if (nutrient) {
-      const servingSize = servingSizes[foodId] || results.find(item => item.id === foodId)?.servingSize;
+      const servingSize =
+        servingSizes[foodId] ||
+        results.find((item) => item.id === foodId)?.servingSize;
       if (servingSize) {
-        const servingSizeFactor = servingSize / results.find(item => item.id === foodId)?.servingSize!;
+        const servingSizeFactor =
+          servingSize /
+          results.find((item) => item.id === foodId)?.servingSize!;
         return (nutrient.amount * servingSizeFactor).toFixed(2);
       }
     }
-    return '0';
+    return "0";
   };
 
   return (
     <Container>
       <CssBaseline />
+      <Box display="flex" justifyContent="center" mt={2}>
+        <img
+          src="logo512.png"
+          alt="logo"
+          width="100"
+          className="hover:scale-110 hover:rotate-3 hover:hue-rotate-15 cursor-pointer bounce-once transition-transform duration-600"
+          onClick={(e) => {
+            // re-add bounce-once class to trigger animation
+            if (e.currentTarget.classList.contains("bounce-once")) {
+              e.currentTarget.classList.remove("bounce-once");
+              e.currentTarget.classList.add("spin-once");
+            } else if (e.currentTarget.classList.contains("spin-once")) {
+              e.currentTarget.classList.remove("spin-once");
+              e.currentTarget.classList.add("bounce-once");
+            }
+          }}
+        />
+      </Box>
       <Typography variant="h4" component="h1" gutterBottom>
         Food Search
       </Typography>
@@ -232,8 +292,8 @@ const App: React.FC = () => {
         <FormControlLabel
           control={
             <Checkbox
-              checked={searchType === 'all'}
-              onChange={() => setSearchType('all')}
+              checked={searchType === "all"}
+              onChange={() => setSearchType("all")}
               name="all"
               color="primary"
             />
@@ -243,8 +303,8 @@ const App: React.FC = () => {
         <FormControlLabel
           control={
             <Checkbox
-              checked={searchType === 'branded'}
-              onChange={() => setSearchType('branded')}
+              checked={searchType === "branded"}
+              onChange={() => setSearchType("branded")}
               name="branded"
               color="primary"
             />
@@ -254,8 +314,8 @@ const App: React.FC = () => {
         <FormControlLabel
           control={
             <Checkbox
-              checked={searchType === 'foundation'}
-              onChange={() => setSearchType('foundation')}
+              checked={searchType === "foundation"}
+              onChange={() => setSearchType("foundation")}
               name="foundation"
               color="primary"
             />
@@ -267,16 +327,21 @@ const App: React.FC = () => {
         variant="contained"
         color="primary"
         onClick={toggleExpandAll}
-        style={{ marginBottom: '20px' }}
+        style={{ marginBottom: "20px" }}
       >
-        {allExpanded ? 'Collapse All' : 'Expand All'}
+        {allExpanded ? "Collapse All" : "Expand All"}
       </Button>
       <div>
         {results.map((item) => (
           <Accordion
             key={item.id}
             expanded={!!expanded[item.id]} // Ensure it's always a boolean
-            onChange={() => toggleExpand(item.id, item.foodClass === 'Branded' ? 'branded' : 'foundation')}
+            onChange={() =>
+              toggleExpand(
+                item.id,
+                item.foodClass === "Branded" ? "branded" : "foundation"
+              )
+            }
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Typography variant="h6">{item.description}</Typography>
@@ -284,31 +349,83 @@ const App: React.FC = () => {
             <AccordionDetails>
               <Box mb={2}>
                 <FormControl variant="outlined" fullWidth>
-                  <InputLabel htmlFor={`serving-size-${item.id}`}>Serving Size</InputLabel>
+                  <InputLabel htmlFor={`serving-size-${item.id}`}>
+                    Serving Size
+                  </InputLabel>
+                  <IconButton
+                    color="warning"
+                    onClick={() =>
+                      handleServingSizeChange(item.id, item.servingSize)
+                    }
+                    style={{ position: "absolute", right: "0", zIndex: 1 }}
+                  >
+                    Reset
+                  </IconButton>
+                  <IconButton
+                    color="secondary"
+                    onClick={() => decreaseServingSize(item.id)}
+                  >
+                    -
+                  </IconButton>
                   <Input
                     id={`serving-size-${item.id}`}
                     type="number"
                     value={servingSizes[item.id] || item.servingSize}
-                    onChange={(e) => handleServingSizeChange(item.id, parseFloat(e.target.value))}
-                    endAdornment={<InputAdornment position="end">{item.servingSizeUnit}</InputAdornment>}
+                    onChange={(e) =>
+                      handleServingSizeChange(
+                        item.id,
+                        parseFloat(e.target.value)
+                      )
+                    }
+                    endAdornment={
+                      <InputAdornment position="end">
+                        {item.servingSizeUnit}
+                      </InputAdornment>
+                    }
                   />
+                  <IconButton
+                    color="primary"
+                    onClick={() => increaseServingSize(item.id)}
+                  >
+                    +
+                  </IconButton>
                 </FormControl>
               </Box>
-              <Typography variant="body1"><strong>Calories:</strong> {getNutrientAmount(item.id, "Energy")} kcal</Typography>
-              <Typography variant="body1"><strong>Protein:</strong> {getNutrientAmount(item.id, "Protein")} g</Typography>
-              <Typography variant="body1"><strong>Carbs:</strong> {getNutrientAmount(item.id, "Carbohydrate, by difference")} g</Typography>
-              <Typography variant="body1"><strong>Total Fiber:</strong> {getNutrientAmount(item.id, "Fiber, total dietary")} g</Typography>
-              <Typography variant="body1"><strong>Fat:</strong> {getNutrientAmount(item.id, "Total lipid (fat)")} g</Typography>
-              <Typography variant="body1"><strong>Sugar:</strong> {getNutrientAmount(item.id, "Total Sugars")} g</Typography>
-              <Divider style={{ margin: '20px 0' }} />
-              <Accordion>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography>Ingredients</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Typography>{item.ingredients}</Typography>
-                </AccordionDetails>
-              </Accordion>
+              <Typography variant="body1">
+                <strong>Calories:</strong>{" "}
+                {getNutrientAmount(item.id, "Energy")} kcal
+              </Typography>
+              <Typography variant="body1">
+                <strong>Protein:</strong>{" "}
+                {getNutrientAmount(item.id, "Protein")} g
+              </Typography>
+              <Typography variant="body1">
+                <strong>Carbs:</strong>{" "}
+                {getNutrientAmount(item.id, "Carbohydrate, by difference")} g
+              </Typography>
+              <Typography variant="body1">
+                <strong>Total Fiber:</strong>{" "}
+                {getNutrientAmount(item.id, "Fiber, total dietary")} g
+              </Typography>
+              <Typography variant="body1">
+                <strong>Fat:</strong>{" "}
+                {getNutrientAmount(item.id, "Total lipid (fat)")} g
+              </Typography>
+              <Typography variant="body1">
+                <strong>Sugar:</strong>{" "}
+                {getNutrientAmount(item.id, "Total Sugars")} g
+              </Typography>
+              <Divider style={{ margin: "20px 0" }} />
+              {item.foodClass === "Branded" && (
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                    <Typography>Ingredients</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <Typography>{item.ingredients}</Typography>
+                  </AccordionDetails>
+                </Accordion>
+              )}
               <Accordion>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                   <Typography>All Nutrients</Typography>
@@ -317,7 +434,13 @@ const App: React.FC = () => {
                   <ul>
                     {nutrients[item.id]?.map((nutrient) => (
                       <li key={nutrient.id}>
-                        <strong>{nutrient.name}:</strong> {(nutrient.amount * (servingSizes[item.id] || item.servingSize) / item.servingSize).toFixed(2)} {nutrient.unitName}
+                        <strong>{nutrient.name}:</strong>{" "}
+                        {(
+                          (nutrient.amount *
+                            (servingSizes[item.id] || item.servingSize)) /
+                          item.servingSize
+                        ).toFixed(2)}{" "}
+                        {nutrient.unitName}
                       </li>
                     ))}
                   </ul>
@@ -329,7 +452,12 @@ const App: React.FC = () => {
       </div>
       <div ref={loader}>
         {results.length > 0 && (
-          <Box display="flex" justifyContent="center" mt={2}>
+          <Box
+            display="flex"
+            justifyContent="center"
+            mt={2}
+            className="min-h-16"
+          >
             <CircularProgress />
           </Box>
         )}

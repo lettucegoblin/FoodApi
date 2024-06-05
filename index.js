@@ -107,9 +107,9 @@ function searchBrandedFoods(searchTerm, pageSize, offset) {
 function searchFoundationFoods(searchTerm, pageSize, offset) {
     return new Promise((resolve, reject) => {
         const sql = `WITH FilteredFoods AS (
-            SELECT *
+            SELECT FoundationFoods.*, 100.0 as servingSize, 'g' as servingSizeUnit
             FROM FoundationFoods
-            WHERE description LIKE ?
+            WHERE FoundationFoods.description LIKE  ?
         ),
         RankedFoods AS (
             SELECT *,
@@ -137,12 +137,16 @@ function searchFoundationFoods(searchTerm, pageSize, offset) {
 function searchAllFoods(searchTerm, pageSize, offset) {
     return new Promise((resolve, reject) => {
         const sql = `WITH BrandedFoodsFiltered AS (
-            SELECT id, fdcId, description, 'Branded' AS foodClass
+            SELECT id, fdcId, description, servingSize, 
+            servingSizeUnit, 'Branded' AS foodClass,
+            ingredients
             FROM BrandedFoods
             WHERE description LIKE ?
         ),
         FoundationFoodsFiltered AS (
-            SELECT id, fdcId, description, 'Foundation' AS foodClass
+            SELECT id, fdcId, description, 
+            100.0 as servingSize, 'g' as servingSizeUnit, 'Foundation' AS foodClass,
+            '' as ingredients
             FROM FoundationFoods
             WHERE description LIKE ?
         ),
