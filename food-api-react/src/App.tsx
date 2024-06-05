@@ -17,7 +17,6 @@ import {
   IconButton,
   InputLabel,
   Input,
-  Checkbox,
   CircularProgress,
   FormControlLabel,
   Divider,
@@ -25,6 +24,9 @@ import {
   ThemeProvider,
   useMediaQuery,
   InputAdornment,
+  AppBar,
+  Radio,
+  RadioGroup,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ThemeToggle from "./ThemeToggle";
@@ -264,9 +266,10 @@ const App: React.FC = () => {
   };
 
   const handleFilterChange = (
-    newSearchType: "all" | "branded" | "foundation"
+    event: React.ChangeEvent<HTMLInputElement>,
+    value: string
   ) => {
-    setSearchType(newSearchType);
+    setSearchType(value as "all" | "branded" | "foundation");
     setResults([]);
     setPage(1);
     setExpanded({});
@@ -291,90 +294,138 @@ const App: React.FC = () => {
     },
   });
 
+  const innerTheme = createTheme({
+    palette: {
+      mode: darkMode ? "dark" : "light",
+      ...(darkMode
+        ? {
+            primary: {
+              main: "#FFFFFF",
+            },
+          }
+        : {
+            primary: {
+              main: "#FFFFFF",
+            },
+          }),
+    },
+    components: {
+      MuiTextField: {
+        styleOverrides: {
+          ...(darkMode
+            ? {
+                root: {},
+              }
+            : {
+                root: {
+                  "& fieldset": {
+                    color: "red",
+                  },
+                  "& input": {
+                    color: "black",
+                    backgroundColor: theme.palette.primary.main,
+                  },
+                  "& label": {
+                    color: "black",
+                  },
+                  "& label.Mui-focused": {
+                    color: "white",
+                    backgroundColor: theme.palette.primary.main,
+                  },
+                },
+              }),
+        },
+      },
+    },
+  });
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Box display="flex" justifyContent="space-between" alignItems="center" >
-        <Typography variant="h4" component="h1" gutterBottom>
-          Food Search
-        </Typography>
-        <Box className="logo" display="flex" justifyContent="center" mt={2}>
-          <img
-            src={FoodLogo}
-            alt="logo"
-            width="100"
-            className="hover:scale-110 hover:rotate-3 hover:hue-rotate-15 cursor-pointer bounce-once transition-transform duration-600"
-            onClick={(e) => {
-              // re-add bounce-once class to trigger animation
-              if (e.currentTarget.classList.contains("bounce-once")) {
-                e.currentTarget.classList.remove("bounce-once");
-                e.currentTarget.classList.add("spin-once");
-              } else if (e.currentTarget.classList.contains("spin-once")) {
-                e.currentTarget.classList.remove("spin-once");
-                e.currentTarget.classList.add("bounce-once");
-              }
-            }}
-          />
+
+      <AppBar position="static">
+        <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box display="flex" alignItems="center">
+            <Box className="logo" display="flex" justifyContent="center" m={2}>
+              <img
+                src={FoodLogo}
+                alt="logo"
+                width="100"
+                className="hover:scale-110 hover:rotate-3 hover:hue-rotate-15 cursor-pointer bounce-once transition-transform duration-600"
+                onClick={(e) => {
+                  // re-add bounce-once class to trigger animation
+                  if (e.currentTarget.classList.contains("bounce-once")) {
+                    e.currentTarget.classList.remove("bounce-once");
+                    e.currentTarget.classList.add("spin-once");
+                  } else if (e.currentTarget.classList.contains("spin-once")) {
+                    e.currentTarget.classList.remove("spin-once");
+                    e.currentTarget.classList.add("bounce-once");
+                  }
+                }}
+              />
+            </Box>
+          </Box>
+          <Box display="flex" flexDirection="column" alignItems="center">
+            <ThemeProvider theme={innerTheme}>
+              <TextField
+                label="Search for food..."
+                value={term}
+                onChange={(e) => {
+                  setTerm(e.target.value);
+                  setPage(1);
+                  setResults([]);
+                }}
+                fullWidth
+                margin="normal"
+                variant="outlined"
+              />
+              <Box display="flex" justifyContent="center" mb={2}>
+                <FormControl component="fieldset">
+                  <RadioGroup
+                    aria-label="search-type"
+                    name="search-type"
+                    value={searchType}
+                    onChange={handleFilterChange}
+                    row
+                  >
+                    <FormControlLabel
+                      value="all"
+                      control={<Radio color="primary" />}
+                      label="All"
+                    />
+                    <FormControlLabel
+                      value="branded"
+                      control={<Radio color="primary" />}
+                      label="Branded"
+                    />
+                    <FormControlLabel
+                      value="foundation"
+                      control={<Radio color="primary" />}
+                      label="Foundation"
+                    />
+                  </RadioGroup>
+                </FormControl>
+              </Box>
+            </ThemeProvider>
+          </Box>
+          <Box m={2}>
+            <ThemeToggle toggleTheme={toggleTheme} />
+          </Box>
         </Box>
-        <ThemeToggle toggleTheme={toggleTheme} />
-      </Box>
+      </AppBar>
 
       <Container>
-        <TextField
-          label="Search for food..."
-          value={term}
-          onChange={(e) => {
-            setTerm(e.target.value);
-            setPage(1);
-            setResults([]);
-          }}
-          fullWidth
-          margin="normal"
-          variant="outlined"
-        />
-        <Box display="flex" justifyContent="center" mb={2}>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={searchType === "all"}
-                onChange={() => handleFilterChange("all")}
-                name="all"
-                color="primary"
-              />
-            }
-            label="All"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={searchType === "branded"}
-                onChange={() => handleFilterChange("branded")}
-                name="branded"
-                color="primary"
-              />
-            }
-            label="Branded"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={searchType === "foundation"}
-                onChange={() => handleFilterChange("foundation")}
-                name="foundation"
-                color="primary"
-              />
-            }
-            label="Foundation"
-          />
-        </Box>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={toggleExpandAll}
-          style={{ marginBottom: "20px" }}
-        >
-          {allExpanded ? "Collapse All" : "Expand All"}
-        </Button>
+        {results.length > 0 && (
+          <Box display="flex" justifyContent="right" mb={2} mt={2}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={toggleExpandAll}
+            >
+              {allExpanded ? "Collapse All" : "Expand All"}
+            </Button>
+          </Box>
+        )}
         <div>
           {results.map((item) => (
             <Accordion
