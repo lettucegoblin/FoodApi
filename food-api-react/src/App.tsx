@@ -31,7 +31,7 @@ if (process.env.NODE_ENV === "production") {
 
 const nutrientApiUrl = `${apiUrlBase}/foodNutrients`;
 
-const PAGE_SIZE = 10; // Number of items to fetch per page
+const PAGE_SIZE = 12; // Number of items to fetch per page
 
 interface FoodItem {
   id: number;
@@ -77,6 +77,9 @@ interface NutrientApiResponse {
 }
 
 const App: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasMore, setHasMore] = useState(true); // Assumes there is more data initially
+
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<FoodItem[]>([]);
   const [page, setPage] = useState(1);
@@ -92,6 +95,7 @@ const App: React.FC = () => {
   const loader = useRef<HTMLDivElement | null>(null);
 
   const handleSearch = async () => {
+    setIsLoading(true);
     let apiUrl = `${apiUrlBase}/searchAll`;
     if (searchType === "branded") {
       apiUrl = `${apiUrlBase}/brandSearch`;
@@ -101,26 +105,22 @@ const App: React.FC = () => {
 
     try {
       const response = await axios.get<ApiResponse>(apiUrl, {
-        params: {
-          term,
-          page,
-          pageSize: PAGE_SIZE,
-        },
+        params: { term, page, pageSize: PAGE_SIZE },
       });
       const newResults = response.data.data;
-      const newServingSizes = newResults.reduce((acc, item) => {
-        acc[item.id] = item.servingSize;
-        return acc;
-      }, {} as { [key: number]: number });
       setResults((prevResults) => [...prevResults, ...newResults]);
-      setServingSizes((prevSizes) => ({ ...prevSizes, ...newServingSizes }));
+      setHasMore(newResults.length === PAGE_SIZE); // Check if there might be more data
+      setIsLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
+      setIsLoading(false);
     }
   };
 
   const loadMore = () => {
-    setPage((prevPage) => prevPage + 1); // Increase page number
+    if (!isLoading && hasMore) {
+      setPage((prevPage) => prevPage + 1);
+    }
   };
 
   const fetchNutrients = async (
@@ -134,7 +134,6 @@ const App: React.FC = () => {
           foundationalFoodId: foodType === "foundation" ? foodId : undefined,
         },
       });
-      console.log("Nutrient data:", response.data.data);
       setNutrients((prevNutrients) => ({
         ...prevNutrients,
         [foodId]: response.data.data,
@@ -151,11 +150,6 @@ const App: React.FC = () => {
   }, [term, page, searchType]); // Run effect when term, page, or searchType changes
 
   useEffect(() => {
-    setTimeout(() => {
-      console.log("Loading more data...");
-      loadMore();
-    }, 5000);
-    
     const handleObserver = (entities: IntersectionObserverEntry[]) => {
       const target = entities[0];
       if (target.isIntersecting) {
@@ -163,13 +157,11 @@ const App: React.FC = () => {
       }
     };
 
-    const options = {
+    const observer = new IntersectionObserver(handleObserver, {
       root: null,
       rootMargin: "20px",
-      threshold: 0.2,
-    };
-
-    const observer = new IntersectionObserver(handleObserver, options);
+      threshold: 1.0,
+    });
 
     if (loader.current) {
       observer.observe(loader.current);
@@ -180,7 +172,7 @@ const App: React.FC = () => {
         observer.unobserve(loader.current);
       }
     };
-  }, []);
+  }, [isLoading, hasMore]); // Include isLoading and hasMore in the dependencies array
 
   const toggleExpand = (id: number, foodType: "branded" | "foundation") => {
     if (!expanded[id]) {
@@ -252,6 +244,16 @@ const App: React.FC = () => {
     return "0";
   };
 
+  const handleFilterChange = (
+    newSearchType: "all" | "branded" | "foundation"
+  ) => {
+    setSearchType(newSearchType);
+    setResults([]);
+    setPage(1);
+    setExpanded({});
+    setNutrients({});
+  };
+
   return (
     <Container>
       <CssBaseline />
@@ -293,7 +295,7 @@ const App: React.FC = () => {
           control={
             <Checkbox
               checked={searchType === "all"}
-              onChange={() => setSearchType("all")}
+              onChange={() => handleFilterChange("all")}
               name="all"
               color="primary"
             />
@@ -304,7 +306,7 @@ const App: React.FC = () => {
           control={
             <Checkbox
               checked={searchType === "branded"}
-              onChange={() => setSearchType("branded")}
+              onChange={() => handleFilterChange("branded")}
               name="branded"
               color="primary"
             />
@@ -315,7 +317,7 @@ const App: React.FC = () => {
           control={
             <Checkbox
               checked={searchType === "foundation"}
-              onChange={() => setSearchType("foundation")}
+              onChange={() => handleFilterChange("foundation")}
               name="foundation"
               color="primary"
             />
@@ -363,7 +365,12 @@ const App: React.FC = () => {
                   </IconButton>
                   <IconButton
                     color="secondary"
-                    onClick={() => decreaseServingSize(item.id)}
+                    onClick={() =>
+                      handleServingSizeChange(
+                        item.id,
+                        servingSizes[item.id] - 1
+                      )
+                    }
                   >
                     -
                   </IconButton>
@@ -385,7 +392,12 @@ const App: React.FC = () => {
                   />
                   <IconButton
                     color="primary"
-                    onClick={() => increaseServingSize(item.id)}
+                    onClick={() =>
+                      handleServingSizeChange(
+                        item.id,
+                        servingSizes[item.id] + 1
+                      )
+                    }
                   >
                     +
                   </IconButton>
@@ -451,17 +463,12 @@ const App: React.FC = () => {
         ))}
       </div>
       <div ref={loader}>
-        {results.length > 0 && (
-          <Box
-            display="flex"
-            justifyContent="center"
-            mt={2}
-            className="min-h-16"
-          >
-            <CircularProgress />
-          </Box>
-        )}
-      </div>
+      {isLoading && (
+        <Box display="flex" justifyContent="center" mt={2} className="min-h-16">
+          <CircularProgress />
+        </Box>
+      )}
+    </div>
     </Container>
   );
 };
