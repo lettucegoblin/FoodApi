@@ -33,7 +33,7 @@ const swaggerOptions = {
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use('/foodapi/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 /**
  * @swagger

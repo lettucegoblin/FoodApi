@@ -481,7 +481,7 @@ const App: React.FC = () => {
             >
               <Box display="flex" justifyContent="center" flexDirection="column" paddingRight={1}>
                 <a
-                  href="/api-docs"
+                  href="/foodapi/api-docs"
                   target="_blank"
                   rel="noreferrer"
                   className="text-white underline p-1 hover:text-yellow-400 text-center"
