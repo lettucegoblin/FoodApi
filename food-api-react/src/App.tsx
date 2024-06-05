@@ -94,33 +94,40 @@ const App: React.FC = () => {
   >("all");
   const loader = useRef<HTMLDivElement | null>(null);
 
+  const searchTimeoutId = useRef<NodeJS.Timeout | null>(null);
+
   const handleSearch = async () => {
-    setIsLoading(true);
-    let apiUrl = `${apiUrlBase}/searchAll`;
-    if (searchType === "branded") {
-      apiUrl = `${apiUrlBase}/brandSearch`;
-    } else if (searchType === "foundation") {
-      apiUrl = `${apiUrlBase}/foundationSearch`;
+    if (searchTimeoutId.current) {
+      clearTimeout(searchTimeoutId.current);
     }
 
-    try {
-      const response = await axios.get<ApiResponse>(apiUrl, {
-        params: { term, page, pageSize: PAGE_SIZE },
-      });
-      const newResults = response.data.data;
-      setResults((prevResults) => [...prevResults, ...newResults]);
-      const newServingSizes = newResults.reduce((acc, item) => {
-        acc[item.id] = item.servingSize;
-        return acc;
-      }, {} as { [key: number]: number });
-      setHasMore(newResults.length === PAGE_SIZE); // Check if there might be more data
-      setIsLoading(false);
-      setServingSizes((prevSizes) => ({ ...prevSizes, ...newServingSizes }));
+    searchTimeoutId.current = setTimeout(async () => {
+      setIsLoading(true);
+      let apiUrl = `${apiUrlBase}/searchAll`;
+      if (searchType === "branded") {
+        apiUrl = `${apiUrlBase}/brandSearch`;
+      } else if (searchType === "foundation") {
+        apiUrl = `${apiUrlBase}/foundationSearch`;
+      }
 
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      setIsLoading(false);
-    }
+      try {
+        const response = await axios.get<ApiResponse>(apiUrl, {
+          params: { term, page, pageSize: PAGE_SIZE },
+        });
+        const newResults = response.data.data;
+        setResults((prevResults) => [...prevResults, ...newResults]);
+        const newServingSizes = newResults.reduce((acc, item) => {
+          acc[item.id] = item.servingSize;
+          return acc;
+        }, {} as { [key: number]: number });
+        setHasMore(newResults.length === PAGE_SIZE); // Check if there might be more data
+        setIsLoading(false);
+        setServingSizes((prevSizes) => ({ ...prevSizes, ...newServingSizes }));
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        setIsLoading(false);
+      }
+    }, 500);
   };
 
   const loadMore = () => {
@@ -371,9 +378,7 @@ const App: React.FC = () => {
                   </IconButton>
                   <IconButton
                     color="secondary"
-                    onClick={() =>
-                      decreaseServingSize(item.id)
-                    }
+                    onClick={() => decreaseServingSize(item.id)}
                   >
                     -
                   </IconButton>
@@ -395,9 +400,7 @@ const App: React.FC = () => {
                   />
                   <IconButton
                     color="primary"
-                    onClick={() =>
-                      increaseServingSize(item.id)
-                    }
+                    onClick={() => increaseServingSize(item.id)}
                   >
                     +
                   </IconButton>
@@ -463,12 +466,17 @@ const App: React.FC = () => {
         ))}
       </div>
       <div ref={loader}>
-      {isLoading && (
-        <Box display="flex" justifyContent="center" mt={2} className="min-h-16">
-          <CircularProgress />
-        </Box>
-      )}
-    </div>
+        {isLoading && (
+          <Box
+            display="flex"
+            justifyContent="center"
+            mt={2}
+            className="min-h-16"
+          >
+            <CircularProgress />
+          </Box>
+        )}
+      </div>
     </Container>
   );
 };
