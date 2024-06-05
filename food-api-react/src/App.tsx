@@ -109,8 +109,14 @@ const App: React.FC = () => {
       });
       const newResults = response.data.data;
       setResults((prevResults) => [...prevResults, ...newResults]);
+      const newServingSizes = newResults.reduce((acc, item) => {
+        acc[item.id] = item.servingSize;
+        return acc;
+      }, {} as { [key: number]: number });
       setHasMore(newResults.length === PAGE_SIZE); // Check if there might be more data
       setIsLoading(false);
+      setServingSizes((prevSizes) => ({ ...prevSizes, ...newServingSizes }));
+
     } catch (error) {
       console.error("Error fetching data:", error);
       setIsLoading(false);
@@ -366,10 +372,7 @@ const App: React.FC = () => {
                   <IconButton
                     color="secondary"
                     onClick={() =>
-                      handleServingSizeChange(
-                        item.id,
-                        servingSizes[item.id] - 1
-                      )
+                      decreaseServingSize(item.id)
                     }
                   >
                     -
@@ -393,10 +396,7 @@ const App: React.FC = () => {
                   <IconButton
                     color="primary"
                     onClick={() =>
-                      handleServingSizeChange(
-                        item.id,
-                        servingSizes[item.id] + 1
-                      )
+                      increaseServingSize(item.id)
                     }
                   >
                     +
