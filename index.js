@@ -1,8 +1,10 @@
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
-const app = express();
 const cors = require('cors');
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
 
+const app = express();
 const port = 6262;
 
 const db = new sqlite3.Database('brandedFoods.db', (err) => {
@@ -13,7 +15,54 @@ const db = new sqlite3.Database('brandedFoods.db', (err) => {
     }
 });
 app.use(cors());
-// example: http://127.0.0.1:3000/foodapi/search?term=soup&page=1&pageSize=10
+
+// Extended: https://swagger.io/specification/#infoObject
+const swaggerOptions = {
+    swaggerDefinition: {
+        openapi: '3.0.0',
+        info: {
+            title: 'Food API',
+            description: 'Food API Information',
+            contact: {
+                name: 'Developer'
+            },
+            servers: [{ url: `http://localhost:${port}` }]
+        }
+    },
+    apis: ['index.js']
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+/**
+ * @swagger
+ * /foodapi/brandSearch:
+ *   get:
+ *     summary: Searches branded foods.
+ *     parameters:
+ *       - name: term
+ *         in: query
+ *         description: Search term for branded foods
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: page
+ *         in: query
+ *         description: Page number
+ *         schema:
+ *           type: integer
+ *       - name: pageSize
+ *         in: query
+ *         description: Number of items per page
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of branded foods
+ *       400:
+ *         description: Bad request
+ */
 app.get('/foodapi/brandSearch', (req, res) => {
     const searchTerm = req.query.term;
     const page = req.query.page ? parseInt(req.query.page) : 1;
@@ -27,8 +76,37 @@ app.get('/foodapi/brandSearch', (req, res) => {
         .catch(error => {
             res.status(400).json(error);
         });
-})
-.get('/foodapi/foundationSearch', (req, res) => {
+});
+
+/**
+ * @swagger
+ * /foodapi/foundationSearch:
+ *   get:
+ *     summary: Searches foundation foods.
+ *     parameters:
+ *       - name: term
+ *         in: query
+ *         description: Search term for foundation foods
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: page
+ *         in: query
+ *         description: Page number
+ *         schema:
+ *           type: integer
+ *       - name: pageSize
+ *         in: query
+ *         description: Number of items per page
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of foundation foods
+ *       400:
+ *         description: Bad request
+ */
+app.get('/foodapi/foundationSearch', (req, res) => {
     const searchTerm = req.query.term;
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
@@ -41,8 +119,37 @@ app.get('/foodapi/brandSearch', (req, res) => {
         .catch(error => {
             res.status(400).json(error);
         });
-})
-.get('/foodapi/searchAll', (req, res) => {
+});
+
+/**
+ * @swagger
+ * /foodapi/searchAll:
+ *   get:
+ *     summary: Searches all foods.
+ *     parameters:
+ *       - name: term
+ *         in: query
+ *         description: Search term for all foods
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - name: page
+ *         in: query
+ *         description: Page number
+ *         schema:
+ *           type: integer
+ *       - name: pageSize
+ *         in: query
+ *         description: Number of items per page
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: A list of all foods
+ *       400:
+ *         description: Bad request
+ */
+app.get('/foodapi/searchAll', (req, res) => {
     const searchTerm = req.query.term;
     const page = req.query.page ? parseInt(req.query.page) : 1;
     const pageSize = req.query.pageSize ? parseInt(req.query.pageSize) : 10;
@@ -55,8 +162,31 @@ app.get('/foodapi/brandSearch', (req, res) => {
         .catch(error => {
             res.status(400).json(error);
         });
-})
-.get('/foodapi/foodNutrients', async (req, res) => {
+});
+
+/**
+ * @swagger
+ * /foodapi/foodNutrients:
+ *   get:
+ *     summary: Retrieves nutrients of a food.
+ *     parameters:
+ *       - name: brandedFoodId
+ *         in: query
+ *         description: Branded food ID
+ *         schema:
+ *           type: string
+ *       - name: foundationalFoodId
+ *         in: query
+ *         description: Foundational food ID
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Nutrients of the food
+ *       400:
+ *         description: Bad request
+ */
+app.get('/foodapi/foodNutrients', async (req, res) => {
     const brandedFoodId = req.query.brandedFoodId;
     const foundationalFoodId = req.query.foundationalFoodId;
     try {
@@ -65,8 +195,9 @@ app.get('/foodapi/brandSearch', (req, res) => {
     } catch (error) {
         res.status(400).json(error);
     }
-})
-.get('/foodapi/', (req, res) => {
+});
+
+app.get('/foodapi/', (req, res) => {
     res.sendFile('food-api-react/build/index.html', {root: __dirname});
 })
 .use('/foodapi', express.static('food-api-react/build'))

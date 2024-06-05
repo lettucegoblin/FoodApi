@@ -31,6 +31,7 @@ import {
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ThemeToggle from "./ThemeToggle";
 import "tailwindcss/tailwind.css";
+import Modal from "@mui/material/Modal";
 
 let apiUrlBase = `http://127.0.0.1:6262/foodapi`;
 if (process.env.NODE_ENV === "production") {
@@ -88,6 +89,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true); // Assumes there is more data initially
 
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [term, setTerm] = useState("");
   const [results, setResults] = useState<FoodItem[]>([]);
   const [page, setPage] = useState(1);
@@ -343,30 +345,91 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
 
-      <AppBar position="static">
-        <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Box display="flex" alignItems="center">
-            <Box className="logo" display="flex" justifyContent="center" m={2}>
-              <img
-                src={FoodLogo}
-                alt="logo"
-                width="100"
-                className="hover:scale-110 hover:rotate-3 hover:hue-rotate-15 cursor-pointer bounce-once transition-transform duration-600"
-                onClick={(e) => {
-                  // re-add bounce-once class to trigger animation
-                  if (e.currentTarget.classList.contains("bounce-once")) {
-                    e.currentTarget.classList.remove("bounce-once");
-                    e.currentTarget.classList.add("spin-once");
-                  } else if (e.currentTarget.classList.contains("spin-once")) {
-                    e.currentTarget.classList.remove("spin-once");
-                    e.currentTarget.classList.add("bounce-once");
-                  }
-                }}
-              />
-            </Box>
+      <Modal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        aria-labelledby="modal-modal-title"
+        aria-describedby="modal-modal-description"
+      >
+        <Box
+          sx={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: 400,
+            bgcolor: "background.paper",
+            border: "2px solid #000",
+            boxShadow: 24,
+            p: 4,
+          }}
+        >
+          <Typography id="modal-modal-title" variant="h6" component="h2">
+            More Info
+          </Typography>
+          <Typography id="modal-modal-description" sx={{ mt: 2 }}>
+            This is a simple food API client built with React and Material-UI.
+            It allows you to search for food items and view their nutritional
+            information. The data was converted from the USDA FoodData Central's
+            JSON files to SQLite.
+          </Typography>
+          <Box display="flex" justifyContent="center" mt={2}>
+            <a
+              href="https://github.com/lettucegoblin/FoodApi"
+              target="_blank"
+              rel="noreferrer"
+              className="text-white underline p-1"
+            >
+              View on GitHub
+            </a>
+            <a
+              href="https://fdc.nal.usda.gov/download-datasets.html"
+              target="_blank"
+              rel="noreferrer"
+              className="text-white underline p-1"
+            >
+              USDA Source
+            </a>
           </Box>
-          <Box display="flex" flexDirection="column" alignItems="center">
-            <ThemeProvider theme={innerTheme}>
+        </Box>
+      </Modal>
+
+      <AppBar position="static">
+        <ThemeProvider theme={innerTheme}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
+            <Box display="flex" alignItems="center">
+              <Box
+                className="logo"
+                display="flex"
+                justifyContent="center"
+                m={2}
+                minWidth={40}
+              >
+                <img
+                  src={FoodLogo}
+                  alt="logo"
+                  width="100"
+                  className="hover:scale-110 hover:rotate-3 hover:hue-rotate-15 cursor-pointer bounce-once transition-transform duration-600"
+                  onClick={(e) => {
+                    // re-add bounce-once class to trigger animation
+                    if (e.currentTarget.classList.contains("bounce-once")) {
+                      e.currentTarget.classList.remove("bounce-once");
+                      e.currentTarget.classList.add("spin-once");
+                    } else if (
+                      e.currentTarget.classList.contains("spin-once")
+                    ) {
+                      e.currentTarget.classList.remove("spin-once");
+                      e.currentTarget.classList.add("bounce-once");
+                    }
+                  }}
+                />
+              </Box>
+            </Box>
+            <Box display="flex" flexDirection="column" alignItems="center">
               <TextField
                 label="Search for food..."
                 value={term}
@@ -387,6 +450,7 @@ const App: React.FC = () => {
                     value={searchType}
                     onChange={handleFilterChange}
                     row
+                    className="justify-center"
                   >
                     <FormControlLabel
                       value="all"
@@ -406,12 +470,30 @@ const App: React.FC = () => {
                   </RadioGroup>
                 </FormControl>
               </Box>
-            </ThemeProvider>
+            </Box>
+            <Box
+              mr={2}
+              ml={2}
+              display="flex"
+              alignItems="center"
+              
+              className=""
+            >
+              <Box display="flex" justifyContent="center" flexDirection="column" paddingRight={1}>
+                <a
+                  href="/api-docs"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-white underline p-1 hover:text-yellow-400 text-center"
+                >
+                  API Docs
+                </a>
+                <Button onClick={() => setIsModalOpen(true)}>About</Button>
+              </Box>
+              <ThemeToggle toggleTheme={toggleTheme} />
+            </Box>
           </Box>
-          <Box m={2}>
-            <ThemeToggle toggleTheme={toggleTheme} />
-          </Box>
-        </Box>
+        </ThemeProvider>
       </AppBar>
 
       <Container>

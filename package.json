@@ -17,7 +17,9 @@
     "express": "^4.19.2",
     "fs": "^0.0.1-security",
     "sqlite3": "^5.1.7",
-    "stream-json": "^1.8.0"
+    "stream-json": "^1.8.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.2"
